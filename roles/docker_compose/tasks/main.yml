@@ -1,0 +1,90 @@
+- name: Update and upgrade apt packages
+  apt:
+    state: latest
+    update_cache: yes
+
+- name: remove extant docker stuff
+  apt:
+    name: "{{ item }}"
+    state: absent
+  loop:
+    - docker
+    - docker-engine
+    - docker.io
+    - containerd
+    - runc    
+
+- name: install deps
+  apt:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - apt-transport-https 
+    - ca-certificates
+    - curl
+    - gnupg-agent
+    - software-properties-common
+
+- name: add docker apt key
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    id: 9DC858229FC7DD38854AE2D88D81803C0EBFCD88
+    state: present
+
+- name: retrieve name of ubuntu distribution
+  shell: lsb_release -cs
+  register: ubuntu_release
+
+- set_fact:
+    ubuntu_release={{ ubuntu_release.stdout }}
+
+- name: add docker package repository
+  apt_repository:
+    repo: "deb https://download.docker.com/linux/ubuntu {{ ubuntu_release }} stable"
+    state: present
+  
+- name: Install docker 
+  apt:
+    state: present
+    name: "{{ item }}"
+  loop:
+    - docker-ce
+    - docker-ce-cli
+    - containerd.io
+
+
+- name: uname -s
+  shell: uname -s
+  register: uname_s
+
+- set_fact:
+    uname_s={{ uname_s.stdout }}
+
+- name: uname -m
+  shell: uname -m
+  register: uname_m
+
+- set_fact:
+    uname_m={{ uname_m.stdout }}
+
+- name: Get docker-compose
+  get_url:
+    url: "https://github.com/docker/compose/releases/download/1.28.0/docker-compose-{{ uname_s }}-{{ uname_m }}"
+    dest: /usr/local/bin/docker-compose
+    mode: 0540
+
+- name: create symbolic link
+  file:
+    state: link
+    src: /usr/local/bin/docker-compose
+    dest: /usr/bin/docker-compose
+    mode: 0540
+
+- name: Add user to docker group if flag provided
+  when: docker_users is defined
+  user:
+    name: "{{ item }}"
+    groups: docker
+    append: yes
+  loop: "{{ docker_users }}"
+    

@@ -1,0 +1,21 @@
+- name: Ensure no conflicting certbot package is installed
+  apt:
+    name: certbot
+    state: absent
+    
+- name: Install snapd
+  apt:
+    name: snapd
+    state: present
+
+- name: Ensure snapd is up to date
+  shell: snap install core; sudo snap refresh core
+
+- name: Install certbot
+  shell: snap install --classic certbot
+
+- name: Link certbot snap to /usr/bin
+  file:
+    state: link
+    src: /snap/bin/certbot
+    path: /usr/bin/certbot

@@ -1,0 +1,22 @@
+- name: Install Nginx 
+  apt:
+    name: nginx
+    state: latest
+    update_cache: yes
+
+- name: Remove default site
+  file:
+    state: absent
+    path: /etc/nginx/sites-enabled/default
+
+- name: "UFW - Allow HTTP on port 80"
+  ufw:
+    rule: allow
+    port: "80"
+    proto: tcp
+
+- name: "UFW - Allow HTTP on port 443"
+  ufw:
+    rule: allow
+    port: "443"
+    proto: tcp    

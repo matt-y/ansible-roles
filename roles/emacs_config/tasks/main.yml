@@ -1,0 +1,24 @@
+- name: Install Emacs
+  apt:
+    name: emacs
+    state: latest
+    update_cache: yes
+    
+- name: Install Git
+  apt:
+    name: git
+    state: latest
+
+- name: Make .emacs.d in user_name home dir
+  file:
+    state: directory
+    path: "~/.emacs.d"
+    
+- name: Copy config to remote .emacs.d
+  copy:
+    force: yes
+    owner: "{{ user_name }}"
+    src: "{{ emacsd_src }}"
+    dest: "{{ emacsd_dest }}"
+    
+

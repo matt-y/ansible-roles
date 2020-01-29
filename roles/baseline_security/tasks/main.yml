@@ -1,0 +1,37 @@
+- name: Update apt cache 
+  apt:
+    update_cache: yes
+
+- name: Install ufw
+  apt:
+    name: ufw
+
+- name: disable root logins
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    state: present
+    regexp: "^#?PermitRootLogin"
+    line: "PermitRootLogin prohibit-password"
+
+- name: disable password authentication
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    state: present
+    regexp: "^#?PasswordAuthentication"
+    line: "PasswordAuthentication no"
+
+- name: UFW - Allow SSH connections
+  ufw:
+    rule: allow
+    name: OpenSSH
+
+- name: UFW - Deny all other incoming traffic by default
+  ufw:
+    state: enabled
+    policy: deny
+    direction: incoming
+
+- name: restart sshd
+  systemd:
+    state: restarted
+    name: sshd
