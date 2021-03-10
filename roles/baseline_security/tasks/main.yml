@@ -6,31 +6,79 @@
   apt:
     name: ufw
 
-- name: disable root logins
+- name: Port {{ ssh_port }}
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    state: present
+    regexp: "^#?Port"
+    line: "Port {{ ssh_port }}"
+  when:
+    - ssh_port is not undefined
+
+- name: PermitRootLogin no
   lineinfile:
     path: /etc/ssh/sshd_config
     state: present
     regexp: "^#?PermitRootLogin"
-    line: "PermitRootLogin prohibit-password"
+    line: "PermitRootLogin no"
 
-- name: disable password authentication
+- name: PasswordAuthentication no
   lineinfile:
     path: /etc/ssh/sshd_config
     state: present
     regexp: "^#?PasswordAuthentication"
     line: "PasswordAuthentication no"
 
-- name: UFW - Allow SSH connections
-  ufw:
-    rule: allow
-    name: OpenSSH
+- name: PubkeyAuthentication yes
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    state: present
+    regexp: "^#?PubkeyAuthentication"
+    line: "PubkeyAuthentication yes"
+    
+- name: LoginGraceTime 20
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    state: present
+    regexp: "^#LoginGraceTime"
+    line: "LoginGraceTime 20"
+
+- name: AllowUsers {{ ssh_allowed_user_list }}
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    state: present
+    regexp: "^#?AllowUsers"
+    line: "AllowUsers {{ ssh_allowed_user_list | join(' ') }}"
+  when:
+    - ssh_allowed_user_list is not undefined and (ssh_allowed_user_list | length) > 0
+
+- name: Set SSH port fact
+  set_fact:
+    ssh_port_val: "{{ ssh_port | default('22') }}"
+  
+- name: UFW - Disable SSH connections on default ssh port 22/tcp
+  community.general.ufw:
+    rule: deny
+    port: "22"
+    proto: tcp
+  when:
+    - ssh_port_val != "22"
+
+- name: UFW - rate limit SSH connections on {{ ssh_port_val }}
+  community.general.ufw:
+    rule: limit
+    to_port: "{{ ssh_port_val }}"
+    proto: tcp
 
 - name: UFW - Deny all other incoming traffic by default
-  ufw:
-    state: enabled
+  community.general.ufw:
     policy: deny
     direction: incoming
 
+- name: UFW - Enable rules
+  community.general.ufw:
+    state: enabled
+    
 - name: restart sshd
   systemd:
     state: restarted
